@@ -1,7 +1,9 @@
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi")
+
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <d3d11_1.h>
-#pragma comment(lib, "d3d11.lib")
 
 // Show Supported Fearure Level in Window Caption
 void ShowFeatureLevel(HWND hwnd, D3D_FEATURE_LEVEL level)
@@ -119,6 +121,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 	};
 
 	UINT Flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+
 #ifdef _DEBUG
 	//Flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
@@ -155,12 +158,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 		MessageBoxA(0, "D3D11CreateDevice() failed", "Fatal Error", MB_OK);
 		return GetLastError();
 	}
-
-	ShowFeatureLevel(hwnd, baseDevice->GetFeatureLevel());
+	// Show Supported Fearure Level in Window Caption
+	ShowFeatureLevel(hwnd, baseDevice->GetFeatureLevel());	
 
 	IDXGISwapChain* d3d11SwapChain = nullptr;
-	IDXGIFactory1* dxgiFactory = nullptr;
-	{
+	IDXGIFactory1* dxgiFactory = nullptr;	
+	
+	// 1-st method. Create factory like FNA3D. It works on Win10, but doesn't work on Win7.
+
+	CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&dxgiFactory);
+
+	// 2-nd method. Get factory from ID3D11Device -> IDXGIDevice -> IDXGIAdapter -> GetParent(). Works everywhere. Comment 1-st method and uncomment this method
+
+	/*{
 		IDXGIDevice* dxgiDevice = nullptr;
 		hr = baseDevice->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(&dxgiDevice));
 		if (SUCCEEDED(hr))
@@ -169,9 +179,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 			hr = dxgiDevice->GetAdapter(&dxgiAdapter);
 			if (SUCCEEDED(hr))
 			{
-				/*DXGI_ADAPTER_DESC adapterDesc;
-				dxgiAdapter->GetDesc(&adapterDesc);
-				SetWindowTextW(hwnd, adapterDesc.Description);*/
 				hr = dxgiAdapter->GetParent(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&dxgiFactory));
 				dxgiAdapter->Release();
 			}
@@ -183,18 +190,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 	{
 		MessageBoxA(0, "Obtain DXGI factory from device failed", "Fatal Error", MB_OK);
 		return GetLastError();
-	}
+	}*/
 
-	DXGI_SWAP_CHAIN_DESC sd = {};	
+
+	DXGI_SWAP_CHAIN_DESC sd = {};
 	sd.BufferDesc.Width = 0;
 	sd.BufferDesc.Height = 0;	
 	sd.BufferDesc.RefreshRate.Numerator = 0;
 	sd.BufferDesc.RefreshRate.Denominator = 0;
-	//sd.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; /* SurfaceFormat.Color */
 	sd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-	sd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-	//
+	sd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;	
 	sd.SampleDesc.Count = 1;
 	sd.SampleDesc.Quality = 0;
 	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
